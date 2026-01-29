@@ -1,0 +1,27 @@
+
+# Environment and secrets
+.env
+openai_env/
+__pycache__/
+clean-repo/
+# Gradio auto-generated files
+.gradio/
+
+# OS and editor files
+*.log
+*.tmp
+*.swp
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore large binaries
+*.dll
+*.so
+*.dylib
+
+# Ignore IDE files
+.vscode/
