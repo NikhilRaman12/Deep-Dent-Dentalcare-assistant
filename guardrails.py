@@ -11,7 +11,7 @@ class QueryGuardRails:
     
     MIN_QUERY_LENGTH = 3
     MAX_QUERY_LENGTH = 500
-    BLOCKED_KEYWORDS = ['sql injection', 'drop table', '<script>', '--', '/*']
+    BLOCKED_KEYWORDS = ['sql injection',  'ignore', 'previous' , 'instructions', drop table', '<script>', '--', '/*']
     
     @staticmethod
     def is_safe_query(query: str) -> Tuple[bool, str]:
