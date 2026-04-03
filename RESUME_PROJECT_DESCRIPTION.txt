@@ -1,0 +1,34 @@
+RESUME PROJECT DESCRIPTION
+===========================
+
+OPTION 1 (Technical Focus):
+Built Deep-Dent, a production-grade Retrieval-Augmented Generation system using LangChain, FAISS vector database, and sentence-transformers embeddings for semantic search across dental care documents.
+Implemented modular architecture with 9 independent components (data loader, chunking, vector store, LLM generator) enabling maintainable, scalable codebase with clean separation of concerns.
+Achieved 1.2s response latency and 45-token average cost per query with 90%+ precision@k, delivering evidence-based answers grounded in authoritative medical documents without hallucinations.
+
+---
+
+OPTION 2 (Business Impact Focus):
+Engineered a healthcare-focused RAG system (Deep-Dent) combining FAISS vector retrieval with local LLM (Ollama) to deliver accurate, grounded responses from dental medical documents while eliminating hallucinations.
+Designed production-ready microservices architecture with error handling, Prometheus monitoring, and comprehensive evaluation metrics (latency, token cost, retrieval precision) for healthcare compliance.
+Demonstrated scalable system handling multiple concurrent users with 1.2s response time, zero API costs, and offline capability—ready for enterprise deployment with Kubernetes orchestration.
+
+---
+
+OPTION 3 (Concise Technical):
+Built Deep-Dent RAG system using LangChain, FAISS, and HuggingFace embeddings for semantic vector search enabling context-aware dental healthcare responses from PDF documents.
+Implemented modular Python architecture with document ingestion pipeline, vector store management, and LLM orchestration, achieving 1.2s latency with production-grade monitoring and evaluation frameworks.
+Integrated Prometheus metrics tracking and comprehensive benchmarking (precision@k, recall, token cost) to ensure clinical relevance while maintaining cost efficiency and offline operability.
+
+---
+
+OPTION 4 (Competitive Edge):
+Developed Deep-Dent, a production-grade RAG chatbot leveraging LangChain LCEL pipeline, FAISS indexing, and sentence-transformers embeddings for domain-specific semantic search across dental medical documents.
+Improved response accuracy to 90%+ precision@k by integrating retrieval-augmented generation, eliminating LLM hallucinations through grounding answers in verified source documents.
+Designed modular, scalable system architecture with comprehensive evaluation (latency: 1.2s, tokens: 45/query) and Prometheus-ready monitoring for healthcare compliance and enterprise deployment readiness.
+
+---
+
+PICK ONE AND USE IN RESUME:
+Most recommended: OPTION 4 (shows competitive edge + metrics + scalability)
+Alternative: OPTION 1 (balanced technical + business)

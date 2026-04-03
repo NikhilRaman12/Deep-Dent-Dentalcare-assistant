@@ -3,124 +3,87 @@
 # =============================
 
 import gradio as gr
+import time
+import tiktoken
 
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_ollama import ChatOllama
+from data_loader import load_documents
+from chunking import split_documents
+from vector_store import create_vector_store, create_retriever
+from generator import create_prompt, create_llm, create_rag_chain
+from monitoring import record_request, record_latency, record_token_cost
+from guardrails import QueryGuardRails, ResponseGuardRails, RateLimiter
+from metafilters import ResponseRanker, ConfidenceCalculator, ContextValidator
 
-from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
+rate_limiter = RateLimiter(max_queries_per_minute=30)
 
+# Load pipeline
+documents = load_documents("Delivering_better_oral_health.pdf")
+chunks = split_documents(documents)
+vectorstore = create_vector_store(chunks)
+retriever = create_retriever(vectorstore)
+prompt = create_prompt()
+llm = create_llm()
+rag_chain = create_rag_chain(retriever, prompt, llm)
 
-# -----------------------------
-# STEP 1: Load PDF
-# -----------------------------
-loader = PyPDFLoader("Delivering_better_oral_health.pdf")
-documents = loader.load()
-
-
-# -----------------------------
-# STEP 2: Split into chunks
-# -----------------------------
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,
-    chunk_overlap=100
-)
-chunks = splitter.split_documents(documents)
-
-
-# -----------------------------
-# STEP 3: Embeddings + Vector DB
-# -----------------------------
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-
-vectorstore = FAISS.from_documents(chunks, embeddings)
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
-
-
-# -----------------------------
-# STEP 4: Prompt
-# -----------------------------
-prompt = PromptTemplate.from_template(
-    """You are Deep-Dent, a professional dental care assistant.
-
-Use ONLY the provided context.
-Do NOT mention documents, PDFs, or sources.
-
-Context:
-{context}
-
-Question:
-{question}
-
-Answer clearly and concisely.
-"""
-)
-
-
-# -----------------------------
-# STEP 5: Local LLM (FREE)
-# -----------------------------
-llm = ChatOllama(
-    model="tinyllama:latest",
-    temperature=0
-)
-
-
-# -----------------------------
-# STEP 6: LCEL RAG Chain
-# -----------------------------
-rag_chain = (
-    {
-        "context": retriever,
-        "question": RunnablePassthrough()
-    }
-    | prompt
-    | llm
-    | StrOutputParser()
-)
-
-
-# -----------------------------
-# STEP 7: Gradio function
-# -----------------------------
 def ask_deep_dent(question):
+    """Process dental health question through RAG pipeline with guard rails."""
     try:
-        if not question.strip():
-            return "Please ask a valid dental health question."
+        # Rate limiting
+        allowed, msg = rate_limiter.is_allowed()
+        if not allowed:
+            return f"Error: {msg}"
+        
+        # Input validation
+        if not question or not question.strip():
+            return "Please provide a valid dental health question."
+        
+        safe, safety_msg = QueryGuardRails.is_safe_query(question)
+        if not safe:
+            return f"Query validation failed: {safety_msg}"
+        
+        is_relevant, _ = QueryGuardRails.is_domain_relevant(question)
+        if not is_relevant:
+            return "Please ask a question related to dental health."
+        
+        record_request()
+        
+        # Get context
+        retrieval_results = retriever.invoke(question)
+        context_text = "\n".join([doc.page_content for doc in retrieval_results])
+        
+        # Validate context
+        context_validation = ContextValidator.validate_context(
+            [doc.page_content for doc in retrieval_results], question
+        )
+        
+        start_time = time.time()
         response = rag_chain.invoke(question)
+        latency = time.time() - start_time
+        
+        if not response:
+            return "Unable to generate response. Please try again."
+        
+        record_latency(latency)
+        enc = tiktoken.get_encoding("cl100k_base")
+        tokens = len(enc.encode(response))
+        record_token_cost(tokens)
+        
+        # Add safety disclaimers
+        response = ResponseGuardRails.add_medical_disclaimer(response)
+        
         return response
+    
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return f"⚠️ Internal error: {str(e)}"
+        return f"Error: {str(e)}"
 
-# -----------------------------
-# STEP 8: Gradio UI
-# -----------------------------
+# UI
 app = gr.Interface(
     fn=ask_deep_dent,
-    inputs=gr.Textbox(
-        lines=3,
-        placeholder="Ask a dental health question"
-    ),
-    outputs=gr.Textbox(
-        lines=10,
-        label="Deep-Dent Answer"
-    ),
-    title="Deep-Dent – Dental Health Assistant",
-    description="Evidence-based dental care assistant powered by RAG and a local LLM"
-   
+    inputs=gr.Textbox(lines=3, placeholder="Ask a dental question"),
+    outputs=gr.Textbox(lines=10, label="Answer"),
+    title="Deep-Dent - Dental Assistant with Guard Rails",
+    description="RAG-powered dental health assistant with safety checks"
 )
 
-
-# -----------------------------
-# STEP 9: Launch
-# -----------------------------
 if __name__ == "__main__":
     app.launch(share=True)
